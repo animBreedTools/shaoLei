@@ -1,3 +1,9 @@
+using DataFrames
+using Distributions
+using DelimitedFiles
+using LinearAlgebra
+using CSV
+
 function bayesPR_shaoLei(genoTrain, phenoTrain, snpInfo, chrs, fixedRegSize, varGenotypic, varResidual, chainLength, burnIn, outputFreq, onScreen)
     SNPgroups, genoX = prepRegionData(snpInfo, chrs, genoTrain, fixedRegSize)
     these2Keep = collect((burnIn+outputFreq):outputFreq:chainLength) #print these iterations
