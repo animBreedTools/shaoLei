@@ -221,7 +221,7 @@ function prepRegionData(snpInfo,chrs,genoTrain,fixedRegSize)
     SNPgroups = []
 #    mapData = readtable(pwd()"/$mapFile", header=false)
     ###only for our map file
-    mapData = readtable("$snpInfo", header=false, separator=' ')
+    mapData = readtable("$snpInfo", header=false, separator=',')
     if size(mapData,2)<5
         mapData = hcat(collect(1:size(mapData,1)),mapData,makeunique=true)
     end
