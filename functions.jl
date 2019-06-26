@@ -165,8 +165,8 @@ const    scaleRes2    = varResidual2*(dfRes-2.0)/dfRes
 #        Ri = kron(inv(Rmat),eye(nRecords))
         Ri = inv(Rmat)
 
-        Ycorr1 = Y1 .+ μ[1]
-        Ycorr2 = Y2 .+ μ[2] 
+        Ycorr1 = Ycorr1 .+ μ[1]
+        Ycorr2 = Ycorr2 .+ μ[2] 
         
         rhs = sum(view(Ycorr1,:,1))
         invLhs = 1.0/nRecords1
@@ -178,8 +178,8 @@ const    scaleRes2    = varResidual2*(dfRes-2.0)/dfRes
         mean = rhs*invLhs
         μ[2] = rand(Normal(mean,sqrt(invLhs*Rmat[2,2])))
 
-        Ycorr1 = Y1 .- μ[1]
-        Ycorr2 = Y2 .- μ[2]
+        Ycorr1 = Ycorr1 .- μ[1]
+        Ycorr2 = Ycorr2 .- μ[2]
         
         for r in 1:nRegions
             theseLoci = SNPgroups[r]
