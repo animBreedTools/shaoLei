@@ -83,7 +83,7 @@ end
 
 
 
-function mtBayesPR_shaoLei(genoTrain::DataFrame,genoTrain2::DataFrame, phenoTrain::DataFrame, snpInfo::String, chrs::Int64, fixedRegSize::Int64, varGenotypic::Array{Float64}, varResidual1::Float64,varResidual2::Float64,chainLength::Int64, burnIn::Int64, outputFreq::Int64, onScreen::Bool,resCor::Bool)
+function mtBayesPR_shaoLei(genoTrain::DataFrame,genoTrain2::DataFrame, phenoTrain::DataFrame, phenoTrain2::DataFrame, snpInfo::String, chrs::Int64, fixedRegSize::Int64, varGenotypic::Array{Float64}, varResidual1::Float64,varResidual2::Float64,chainLength::Int64, burnIn::Int64, outputFreq::Int64, onScreen::Bool,resCor::Bool)
     SNPgroups, genoX = prepRegionData(snpInfo, chrs, genoTrain, fixedRegSize)
     these2Keep = collect((burnIn+outputFreq):outputFreq:chainLength) #print these iterations
     nRegions    = length(SNPgroups)
@@ -95,9 +95,10 @@ function mtBayesPR_shaoLei(genoTrain::DataFrame,genoTrain2::DataFrame, phenoTrai
     genoX = 0 #release memory
     genoTrain2 = 0
     println("X is this size", size(X1),size(X2))
-    Y           = convert(Array{Float64}, phenoTrain)
+    Y1           = convert(Array{Float64}, phenoTrain)
+    Y2           = convert(Array{Float64}, phenoTrain2)
     println("Y is this size", size(Y))
-    nTraits, nRecords , nMarkers   = size(Y,2), size(Y,1), size(X1,2)
+    nTraits, nRecords1, nRecords2 , nMarkers   = 2, size(Y1,1), size(Y2,1) size(X1,2)
     fileControl(nTraits,fixedRegSize)
     p1           = mean(X1,dims=1)./2.0
     sum2pq1      = sum(2*(1 .- p1).*p1)
@@ -130,15 +131,22 @@ const    scaleRes2    = varResidual2*(dfRes-2.0)/dfRes
     #initial Beta values as "0"
     tempBetaMat     = zeros(Float64,nTraits,nMarkers)
     μ               = mean(Y,dims=1)    
-    X1             .-= ones(Float64,nRecords)*2*p1    
-    X2             .-= ones(Float64,nRecords)*2*p2
+    X1             .-= ones(Float64,nRecords1)*2*p1    
+    X2             .-= ones(Float64,nRecords2)*2*p2
     
     MpM = []
+    #for j in 1:nMarkers
+    #    tempM = Array{Float64}(nRecords,0)
+    #    tempM = convert(Array{Float64},hcat(tempM,X1[:,j],X2[:,j]))
+    #    this = tempM'tempM
+    #    this[1,2]=this[2,1]=0.0
+    #    MpM = push!(MpM,this)
+    #end
     for j in 1:nMarkers
-        tempM = Array{Float64}(nRecords,0)
-        tempM = convert(Array{Float64},hcat(tempM,X1[:,j],X2[:,j]))
-        this = tempM'tempM
-        this[1,2]=this[2,1]=0.0
+        this = Array{Float64}(nTraits,nTraits)
+        this[1,1] = X1[:,j]'X1[:,j]
+        this[2,2] = X2[:,j]'X2[:,j]
+        this[1,2] =this[2,1] =0.0
         MpM = push!(MpM,this)
     end
     nowM  = 0
