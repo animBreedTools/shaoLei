@@ -130,7 +130,7 @@ const    scaleRes2    = varResidual2*(dfRes-2.0)/dfRes
     
     #initial Beta values as "0"
     tempBetaMat     = zeros(Float64,nTraits,nMarkers)
-    μ               = mean(Y,dims=1)    
+    μ               = [mean(Y1) mean(Y2)]    
     X1             .-= ones(Float64,nRecords1)*2*p1    
     X2             .-= ones(Float64,nRecords2)*2*p2
     
@@ -153,31 +153,36 @@ const    scaleRes2    = varResidual2*(dfRes-2.0)/dfRes
     tempM = 0
     
     
-    Ycorr = Y .- μ
-            
+    Ycorr1 = Y1 .- μ[1]
+    Ycorr2 = Y2 .- μ[2]
+    
     for iter in 1:chainLength
         #sample residual var
-        R1 = sampleVarE(νS_e1,Ycorr[:,1],df_e,nRecords)
-        R2 = sampleVarE(νS_e2,Ycorr[:,2],df_e,nRecords)
+        R1 = sampleVarE(νS_e1,Ycorr1,df_e,nRecords1)
+        R2 = sampleVarE(νS_e2,Ycorr2,df_e,nRecords2)
         Rmat = [R1 0;0 R2]
 #        Ri = kron(inv(Rmat),eye(nRecords))
         Ri = inv(Rmat)
 
-        Ycorr .+= μ
+        Ycorr1 = Y1 .+ μ[1]
+        Ycorr2 = Y2 .+ μ[2] 
+        
         for t in 1:nTraits
             rhs = sum(view(Ycorr,:,t))
             invLhs = 1.0/nRecords
             mean = rhs*invLhs
             μ[t] = rand(Normal(mean,sqrt(invLhs*Rmat[t,t])))
         end
-        Ycorr .-= μ
+
+        Ycorr1 = Y1 .- μ[1]
+        Ycorr2 = Y2 .- μ[2]
         
         for r in 1:nRegions
             theseLoci = SNPgroups[r]
             regionSize = length(theseLoci)
             invB = inv(covBeta[r])
             for locus in theseLoci::UnitRange{Int64}
-                sampleBeta_shaoLei!(tempBetaMat,nTraits,X1,X2,Ri,locus,MpM,Ycorr,invB)
+                sampleBeta_shaoLei!(tempBetaMat,nTraits,X1,X2,Ri,locus,MpM,Ycorr1,Ycorr2,invB)
             end
             covBeta[r] = sampleCovBeta(dfβ,regionSize,Vb,tempBetaMat, theseLoci)
         end
@@ -186,13 +191,15 @@ const    scaleRes2    = varResidual2*(dfRes-2.0)/dfRes
     GC.gc()
 end
 
-function sampleBeta_shaoLei!(tempBetaMat,nTraits,X1,X2,Ri,locus,xpx,Ycorr,invB)
-    Ycorr .+= [view(X1,:,locus).*view(tempBetaMat,1,locus) view(X2,:,locus).*view(tempBetaMat,2,locus)]
-    rhs     = [view(X1,:,locus)'*view(Ycorr,:,1)*Ri[1];view(X2,:,locus)'*view(Ycorr,:,2)*Ri[4]]
+function sampleBeta_shaoLei!(tempBetaMat,nTraits,X1,X2,Ri,locus,xpx,Ycorr1,Ycorr2,invB)
+    Ycorr1 .+= view(X1,:,locus).*view(tempBetaMat,1,locus)
+    Ycorr2 .+= view(X2,:,locus).*view(tempBetaMat,2,locus)
+    rhs     = [view(X1,:,locus)'*view(Ycorr1,:,1)*Ri[1];view(X2,:,locus)'*view(Ycorr2,:,1)*Ri[4]]
     invLhs  = inv(xpx[locus].*Ri .+ invB)    
     meanBeta = invLhs*rhs
     tempBetaMat[:,locus] = rand(MvNormal(meanBeta,convert(Array,Symmetric(invLhs))))
-    Ycorr .-= [view(X1,:,locus).*view(tempBetaMat,1,locus) view(X2,:,locus).*view(tempBetaMat,2,locus)]
+    Ycorr1 .-= view(X1,:,locus).*view(tempBetaMat,1,locus)
+    Ycorr2 .-= view(X2,:,locus).*view(tempBetaMat,2,locus)
 end
 
 function outputControl_shaoLei(sum2pq,onScreen,iter,these2Keep,tempBetaMat,μ,covBeta,varE,fixedRegSize,nRegions)
