@@ -168,12 +168,15 @@ const    scaleRes2    = varResidual2*(dfRes-2.0)/dfRes
         Ycorr1 = Y1 .+ μ[1]
         Ycorr2 = Y2 .+ μ[2] 
         
-        for t in 1:nTraits
-            rhs = sum(view(Ycorr,:,t))
-            invLhs = 1.0/nRecords
-            mean = rhs*invLhs
-            μ[t] = rand(Normal(mean,sqrt(invLhs*Rmat[t,t])))
-        end
+        rhs = sum(view(Ycorr1,:,1))
+        invLhs = 1.0/nRecords1
+        mean = rhs*invLhs
+        μ[1] = rand(Normal(mean,sqrt(invLhs*Rmat[1,1])))
+        
+        rhs = sum(view(Ycorr2,:,1))
+        invLhs = 1.0/nRecords2
+        mean = rhs*invLhs
+        μ[2] = rand(Normal(mean,sqrt(invLhs*Rmat[2,2])))
 
         Ycorr1 = Y1 .- μ[1]
         Ycorr2 = Y2 .- μ[2]
