@@ -98,7 +98,7 @@ function mtBayesPR_shaoLei(genoTrain::DataFrame,genoTrain2::DataFrame, phenoTrai
     Y1           = convert(Array{Float64}, phenoTrain)
     Y2           = convert(Array{Float64}, phenoTrain2)
     println("Y is this size", size(Y))
-    nTraits, nRecords1, nRecords2 , nMarkers   = 2, size(Y1,1), size(Y2,1) size(X1,2)
+    nTraits, nRecords1, nRecords2 , nMarkers   = 2, size(Y1,1), size(Y2,1), size(X1,2)
     fileControl(nTraits,fixedRegSize)
     p1           = mean(X1,dims=1)./2.0
     sum2pq1      = sum(2*(1 .- p1).*p1)
