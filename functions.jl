@@ -4,6 +4,89 @@ using DelimitedFiles
 using LinearAlgebra
 using CSV
 
+function w_bayesPR_shaoLei(genoTrain, phenoTrain, weights, snpInfo, chrs, fixedRegSize, varGenotypic, varResidual, chainLength, burnIn, outputFreq, onScreen)
+    SNPgroups, genoX = prepRegionData(snpInfo, chrs, genoTrain, fixedRegSize)
+    these2Keep = collect((burnIn+outputFreq):outputFreq:chainLength) #print these iterations
+    nRegions    = length(SNPgroups)
+    println("number of regions: ", nRegions)
+    X           = convert(Array{Float64}, genoX[2:end])
+    genoX = 0
+    println("X is this size", size(X))
+    y           = convert(Array{Float64}, phenoTrain)
+    println("y is this size", size(y))
+    nTraits, nRecords , nMarkers   = size(y,2), size(y,1), size(X,2)
+    w           = convert(Array{Float64}, weights)
+    iD          = full(Diagonal(1 ./ w))
+    fileControlSt(fixedRegSize)
+    p           = mean(X,dims=1)./2.0
+    sum2pq      = sum(2*(1 .- p).*p) 
+  
+    #priors
+    dfEffectVar = 4.0
+    dfRes       = 4.0
+
+    if varGenotypic==0.0
+        varBeta      = fill(0.0005, nRegions)
+        scaleVar     = 0.0005
+        else
+        varBeta      = fill(varGenotypic/sum2pq, nRegions)
+        scaleVar     = varBeta[1]*(dfEffectVar-2.0)/dfEffectVar
+    end
+    if varResidual==0.0
+        varResidual  = 0.0005
+        scaleRes     = 0.0005
+        else
+        scaleRes    = varResidual*(dfRes-2.0)/dfRes    
+    end
+    
+    #precomputation of vsB for convenience
+    νS_β            = scaleVar*dfEffectVar
+    df_β            = dfEffectVar
+    νS_e            = scaleRes*dfRes
+    df_e            = dfRes
+    #initial values as "0"
+    tempBetaVec     = zeros(Float64,nMarkers)
+    μ               = mean(y)
+    X              .-= ones(Float64,nRecords)*2p
+#    xpx=[]
+#    for i in 1:nMarkers
+#    push!(xpx,dot(X[:,i],X[:,i]))
+#    end
+    xpiDx           = diag(X'*iD*X)
+    XpiD            = (X'*iD)'   #this is to iterate over columns in the body "dot(view(XpiD,:,l),ycorr)"
+    println("size of xpiDx $(size(xpiDx))")
+    println("size of XpiD $(size(XpiD))")
+    ycorr           = y .- μ
+    GC.gc()
+    #MCMC starts here
+    for iter in 1:chainLength
+        #sample residual variance
+        varE = sampleVarE(νS_e,ycorr,df_e,nRecords)
+        #sample intercept
+        ycorr    .+= μ
+        rhs      = sum(ycorr)
+        invLhs   = 1.0/nRecords
+        meanMu   = rhs*invLhs
+        μ        = rand(Normal(meanMu,sqrt(invLhs*varE)))
+        ycorr    .-= μ
+        for r in 1:nRegions
+            theseLoci = SNPgroups[r]
+            regionSize = length(theseLoci)
+            λ_r = varE/varBeta[r]
+            for l in theseLoci::UnitRange{Int64}
+                BLAS.axpy!(tempBetaVec[l], view(X,:,l), ycorr)
+                rhs = view(XpiD,:,l)'*ycorr
+                lhs = xpiDx[l] + λ_r
+                meanBeta = lhs\rhs
+                tempBetaVec[l] = sampleBeta(meanBeta, lhs, varE)
+                BLAS.axpy!(-1*tempBetaVec[l], view(X,:,l), ycorr)
+            end
+            varBeta[r] = sampleVarBeta(νS_β,tempBetaVec[theseLoci],df_β,regionSize)
+        end
+        outputControlSt(onScreen,iter,these2Keep,X,tempBetaVec,μ,varBeta,varE,fixedRegSize)
+    end
+end
+
 function bayesPR_shaoLei(genoTrain, phenoTrain, snpInfo, chrs, fixedRegSize, varGenotypic, varResidual, chainLength, burnIn, outputFreq, onScreen)
     SNPgroups, genoX = prepRegionData(snpInfo, chrs, genoTrain, fixedRegSize)
     these2Keep = collect((burnIn+outputFreq):outputFreq:chainLength) #print these iterations
