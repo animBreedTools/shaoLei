@@ -16,7 +16,8 @@ function w_bayesPR_shaoLei(genoTrain, phenoTrain, weights, snpInfo, chrs, fixedR
     println("y is this size", size(y))
     nTraits, nRecords , nMarkers   = size(y,2), size(y,1), size(X,2)
     w           = convert(Array{Float64}, weights)
-    iD          = full(Diagonal(1 ./ w))
+#    iD          = full(Diagonal(1 ./ w))
+    iD          = full(Diagonal(w))
     fileControlSt(fixedRegSize)
     p           = mean(X,dims=1)./2.0
     sum2pq      = sum(2*(1 .- p).*p) 
