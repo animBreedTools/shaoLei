@@ -5,12 +5,11 @@ using LinearAlgebra
 using CSV
 
 function w_bayesPR_shaoLei(genoTrain, phenoTrain, weights, snpInfo, chrs, fixedRegSize, varGenotypic, varResidual, chainLength, burnIn, outputFreq, onScreen)
-    SNPgroups, genoX = prepRegionData(snpInfo, chrs, genoTrain, fixedRegSize)
+    SNPgroups = prepRegionData(snpInfo, chrs, genoTrain, fixedRegSize)
     these2Keep = collect((burnIn+outputFreq):outputFreq:chainLength) #print these iterations
     nRegions    = length(SNPgroups)
     println("number of regions: ", nRegions)
-    X           = convert(Array{Float64}, genoX[2:end])
-    genoX = 0
+    X           = convert(Array{Float64}, genoTrain[2:end])
     println("X is this size", size(X))
     y           = convert(Array{Float64}, phenoTrain)
     println("y is this size", size(y))
@@ -52,8 +51,10 @@ function w_bayesPR_shaoLei(genoTrain, phenoTrain, weights, snpInfo, chrs, fixedR
 #    for i in 1:nMarkers
 #    push!(xpx,dot(X[:,i],X[:,i]))
 #    end
-    xpiDx           = diag(X'*iD*X)
-    XpiD            = (X'*iD)'   #this is to iterate over columns in the body "dot(view(XpiD,:,l),ycorr)"
+#    xpiDx           = diag(X'*iD*X)
+    xpiDx            = diag((X.*w)'*X)
+#    XpiD            = (X'*iD)'   #this is to iterate over columns in the body "dot(view(XpiD,:,l),ycorr)"
+    XpiD            = iD*X   #this is to iterate over columns in the body "dot(view(XpiD,:,l),ycorr)"
     println("size of xpiDx $(size(xpiDx))")
     println("size of XpiD $(size(XpiD))")
     ycorr           = y .- μ
@@ -88,12 +89,11 @@ function w_bayesPR_shaoLei(genoTrain, phenoTrain, weights, snpInfo, chrs, fixedR
 end
 
 function bayesPR_shaoLei(genoTrain, phenoTrain, snpInfo, chrs, fixedRegSize, varGenotypic, varResidual, chainLength, burnIn, outputFreq, onScreen)
-    SNPgroups, genoX = prepRegionData(snpInfo, chrs, genoTrain, fixedRegSize)
+    SNPgroups = prepRegionData(snpInfo, chrs, genoTrain, fixedRegSize)
     these2Keep = collect((burnIn+outputFreq):outputFreq:chainLength) #print these iterations
     nRegions    = length(SNPgroups)
     println("number of regions: ", nRegions)
-    X           = convert(Array{Float64}, genoX[2:end])
-    genoX = 0
+    X           = convert(Array{Float64}, genoTrain[2:end])
     println("X is this size", size(X))
     y           = convert(Array{Float64}, phenoTrain)
     println("y is this size", size(y))
@@ -167,15 +167,15 @@ end
 
 
 function mtBayesPR_shaoLei(genoTrain::DataFrame,genoTrain2::DataFrame, phenoTrain, phenoTrain2, snpInfo::String, chrs::Int64, fixedRegSize::Int64, varGenotypic::Array{Float64}, varResidual1::Float64,varResidual2::Float64,chainLength::Int64, burnIn::Int64, outputFreq::Int64, onScreen::Bool,resCor::Bool)
-    SNPgroups, genoX = prepRegionData(snpInfo, chrs, genoTrain, fixedRegSize)
+    SNPgroups = prepRegionData(snpInfo, chrs, genoTrain, fixedRegSize)
     these2Keep = collect((burnIn+outputFreq):outputFreq:chainLength) #print these iterations
     nRegions    = length(SNPgroups)
     println("number of regions: ", nRegions)
     dfEffect    = 4.0
     dfRes       = 4.0
-    X1           = convert(Array{Float64}, genoX[:,2:end])  #first colum is ID
+    X1           = convert(Array{Float64}, genoTrain[:,2:end])  #first colum is ID
     X2           = convert(Array{Float64}, genoTrain2[:,2:end])  #first colum is ID
-    genoX = 0 #release memory
+    genoTrain  = 0 #release memory
     genoTrain2 = 0
     println("X is this size", size(X1),size(X2))
     Y1           = convert(Array{Float64}, phenoTrain)
@@ -341,8 +341,8 @@ function prepRegionData(snpInfo,chrs,genoTrain,fixedRegSize)
 #    genoX = genoTrain[vcat(Symbol("ID"),usedLoci)]    #trim genoData
 #     genoX = genoTrain[[1; [find(i -> i == j, names(genoTrain))[] for j in [Symbol(mapData[:snpID][i]) for i in 1:size(mapData,1)]]]]
     #genoX = genoTrain[[find(i -> i == j, names(genoTrain))[] for j in [Symbol(mapData[:snpID][i]) for i in 1:size(mapData,1)]]]
-    genoX = genoTrain
-    totLoci = size(genoX[2:end],2) # first col is ID
+    #genoX = genoTrain
+    totLoci = size(genoTrain[2:end],2) # first col is ID
     snpInfoFinal = DataFrame(Any, 0, 3)
     if fixedRegSize==99
         println("fixedRedSize $fixedRegSize")
@@ -375,7 +375,7 @@ function prepRegionData(snpInfo,chrs,genoTrain,fixedRegSize)
     for g in 1:accRegion
         push!(SNPgroups,searchsorted(snpInfoFinal[:,3], g))
     end
-    return SNPgroups, genoX
+    return SNPgroups #, genoX
 end
 
 function outputControlSt(onScreen,iter,these2Keep,X,tempBetaVec,μ,varBeta,varE,fixedRegSize)
