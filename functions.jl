@@ -53,8 +53,7 @@ function w_bayesPR_shaoLei(genoTrain, phenoTrain, weights, snpInfo, chrs, fixedR
 #    end
 #    xpiDx           = diag(X'*iD*X)
     xpiDx            = diag((X.*w)'*X)  #w[i] is already iD[i,i]
-#this also slowes down the run time...WHY?    XpiD            = (X'*iD)'   #this is to iterate over columns in the body "dot(view(XpiD,:,l),ycorr)"
-    XpiD            = iD*X        #this is to iterate over columns in the body "dot(view(XpiD,:,l),ycorr)"
+    XpiD             = iD*X        #this is to iterate over columns in the body "dot(view(XpiD,:,l),ycorr)"
     println("size of xpiDx $(size(xpiDx))")
     println("size of XpiD $(size(XpiD))")
     ycorr           = y .- μ
