@@ -439,8 +439,8 @@ end
 function sampleVarE(νS_e,yCorVec,df_e,nRecords)
     return((νS_e + dot(yCorVec,yCorVec))/rand(Chisq(df_e + nRecords)))
 end
-function sampleVarE_w(νS_e,yCorVec,df_e,nRecords)
-    return((νS_e + dot(yCorVec,w,yCorVec))/rand(Chisq(df_e + nRecords)))
+function sampleVarE_w(νS_e,yCorVec,wVec,df_e,nRecords)
+    return((νS_e + dot(yCorVec,wVec,yCorVec))/rand(Chisq(df_e + nRecords)))
 end
 function sampleCovBeta(dfβ, regionSize, Vb , tempBetaMat, theseLoci)
     Sb = tempBetaMat[:,theseLoci]*tempBetaMat[:,theseLoci]'
