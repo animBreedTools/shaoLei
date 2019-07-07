@@ -61,7 +61,7 @@ function w_bayesPR_shaoLei(genoTrain, phenoTrain, weights, snpInfo, chrs, fixedR
     #MCMC starts here
     for iter in 1:chainLength
         #sample residual variance
-        varE = sampleVarE_w(νS_e,ycorr,iD,df_e,nRecords)
+        varE = sampleVarE_w(νS_e,ycorr,w,df_e,nRecords)
         #sample intercept
         ycorr    .+= μ
 #        rhs = ones(nRecords)'iD*ycorr
