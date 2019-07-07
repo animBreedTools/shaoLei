@@ -61,7 +61,7 @@ function w_bayesPR_shaoLei(genoTrain, phenoTrain, weights, snpInfo, chrs, fixedR
     #MCMC starts here
     for iter in 1:chainLength
         #sample residual variance
-        varE = sampleVarE(νS_e,ycorr,df_e,nRecords)
+        varE = sampleVarE_w(νS_e,ycorr,iD,df_e,nRecords)
         #sample intercept
         ycorr    .+= μ
 #        rhs = ones(nRecords)'iD*ycorr
@@ -438,6 +438,9 @@ function sampleVarBeta(νS_β,whichLoci,df_β,regionSize)
 end
 function sampleVarE(νS_e,yCorVec,df_e,nRecords)
     return((νS_e + dot(yCorVec,yCorVec))/rand(Chisq(df_e + nRecords)))
+end
+function sampleVarE_w(νS_e,yCorVec,df_e,nRecords)
+    return((νS_e + dot(yCorVec,w,yCorVec))/rand(Chisq(df_e + nRecords)))
 end
 function sampleCovBeta(dfβ, regionSize, Vb , tempBetaMat, theseLoci)
     Sb = tempBetaMat[:,theseLoci]*tempBetaMat[:,theseLoci]'
