@@ -64,8 +64,10 @@ function w_bayesPR_shaoLei(genoTrain, phenoTrain, weights, snpInfo, chrs, fixedR
         varE = sampleVarE(νS_e,ycorr,df_e,nRecords)
         #sample intercept
         ycorr    .+= μ
-        rhs      = sum(ycorr)
-        invLhs   = 1.0/nRecords
+        rhs = ones(nRecords)'iD*ycorr
+        invLhs = inv(ones(nRecords)'*iD*ones(nRecords))
+#        rhs      = sum(ycorr)
+#        invLhs   = 1.0/nRecords
         meanMu   = rhs*invLhs
         μ        = rand(Normal(meanMu,sqrt(invLhs*varE)))
         ycorr    .-= μ
