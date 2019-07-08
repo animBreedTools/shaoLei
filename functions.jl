@@ -336,10 +336,13 @@ function outputControl_shaoLei(sum2pq,onScreen,iter,these2Keep,tempBetaMat,μ,co
         out3 = open(pwd()*"/varEOut$fixedRegSize", "a")
         writecsv(out3, varE)
         close(out3)
+        genCov    = sum2pq.*coVarBeta
+        out4 = open(pwd()*"/varEOut$fixedRegSize", "a")
+        writecsv(out4, genCov)
+        close(out4)
         if onScreen==true
             coVarBeta = cov(tempBetaMat')
             corBeta   = cor(tempBetaMat') 
-            genCov    = sum2pq.*coVarBeta
             println("iter $iter \n coVarBeta (Overall): $coVarBeta \n genCov: $genCov \n corBeta: $corBeta \n varE: $varE \n")
         elseif onScreen==false
              @printf("iter %s\n", iter)
