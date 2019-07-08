@@ -209,24 +209,24 @@ end
 
 function outputControl_shaoLei(sum2pq,onScreen,iter,these2Keep,tempBetaMat,μ,covBeta,varE,fixedRegSize,nRegions)
     if iter in these2Keep
-        out0 = open(pwd()*"/muOut$fixedRegSize", "a")
+        out0 = open(pwd()*"/muOutMT$fixedRegSize", "a")
         writecsv(out0, μ)
         close(out0)
         for t in 1:2
-            out1 = open(pwd()*"/beta"*"$t"*"Out$fixedRegSize", "a")
+            out1 = open(pwd()*"/beta"*"$t"*"OutMT$fixedRegSize", "a")
             writecsv(out1, tempBetaMat[t,:]')
             close(out1)
         end
-        outCov = open(pwd()*"/covBetaOut$fixedRegSize", "a")
+        outCov = open(pwd()*"/covBetaOutMT$fixedRegSize", "a")
         printThis = [vcat(covBeta[r]...) for r in 1:nRegions]'
         writecsv(outCov, printThis)
         close(outCov)
-        out3 = open(pwd()*"/varEOut$fixedRegSize", "a")
+        out3 = open(pwd()*"/varEOutMT$fixedRegSize", "a")
         writecsv(out3, varE)
         close(out3)
         coVarBeta = cov(tempBetaMat')
         genCov    = sum2pq.*coVarBeta
-        out4 = open(pwd()*"/varEOut$fixedRegSize", "a")
+        out4 = open(pwd()*"/varUOutMT$fixedRegSize", "a")
         writecsv(out4, genCov)
         close(out4)
         if onScreen==true
