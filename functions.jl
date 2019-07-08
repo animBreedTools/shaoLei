@@ -227,7 +227,7 @@ function outputControl_shaoLei(sum2pq,onScreen,iter,these2Keep,tempBetaMat,μ,co
         coVarBeta = cov(tempBetaMat')
         genCov    = sum2pq.*coVarBeta
         out4 = open(pwd()*"/varUOutMT$fixedRegSize", "a")
-        writecsv(out4, genCov)
+        writecsv(out4, vec(genCov)')
         close(out4)
         if onScreen==true
             corBeta   = cor(tempBetaMat') 
@@ -336,7 +336,7 @@ function fileControlSt(fixedRegSize)
 end
 
 function fileControl(nTraits,fixedRegSize)
-    files2Remove = ["muOut$fixedRegSize", "varEOut$fixedRegSize", "covBetaOut$fixedRegSize", "coVarUhatOut$fixedRegSize"]
+    files2Remove = ["muOutMT$fixedRegSize", "varEOutMT$fixedRegSize", "covBetaOutMT$fixedRegSize", "varUOutMT$fixedRegSize"]
     for t in 1:nTraits
         push!(files2Remove,"beta"*"$t"*"Out$fixedRegSize")
         push!(files2Remove,"varBeta"*"$t"*"Out$fixedRegSize")
