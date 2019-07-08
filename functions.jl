@@ -89,85 +89,119 @@ function w_bayesPR_shaoLei(genoTrain, phenoTrain, weights, snpInfo, chrs, fixedR
     end
 end
 
-function bayesPR_shaoLei(genoTrain, phenoTrain, snpInfo, chrs, fixedRegSize, varGenotypic, varResidual, chainLength, burnIn, outputFreq, onScreen)
+function mtBayesPR_shaoLei(genoTrain::DataFrame,genoTrain2::DataFrame, phenoTrain, phenoTrain2, snpInfo::String, chrs::Int64, fixedRegSize::Int64, varGenotypic::Array{Float64}, varResidual1::Float64,varResidual2::Float64,chainLength::Int64, burnIn::Int64, outputFreq::Int64, onScreen::Bool,resCor::Bool)
     SNPgroups = prepRegionData(snpInfo, chrs, genoTrain, fixedRegSize)
     these2Keep = collect((burnIn+outputFreq):outputFreq:chainLength) #print these iterations
     nRegions    = length(SNPgroups)
     println("number of regions: ", nRegions)
-    X           = convert(Array{Float64}, genoTrain[2:end])
-    println("X is this size", size(X))
-    y           = convert(Array{Float64}, phenoTrain)
-    println("y is this size", size(y))
-    nTraits, nRecords , nMarkers   = size(y,2), size(y,1), size(X,2)
-    fileControlSt(fixedRegSize)
-    p           = mean(X,dims=1)./2.0
-    sum2pq      = sum(2*(1 .- p).*p) 
-  
-    #priors
-    dfEffectVar = 4.0
+    dfEffect    = 4.0
     dfRes       = 4.0
+    X1           = convert(Array{Float64}, genoTrain[:,2:end])  #first colum is ID
+    X2           = convert(Array{Float64}, genoTrain2[:,2:end])  #first colum is ID
+    genoTrain  = 0 #release memory
+    genoTrain2 = 0
+    println("X is this size", size(X1),size(X2))
+    Y1           = convert(Array{Float64}, phenoTrain)
+    Y2           = convert(Array{Float64}, phenoTrain2)
+    println("Y1 is this size", size(Y1))
+    println("Y2 is this size", size(Y2))
+    nTraits, nRecords1, nRecords2 , nMarkers   = 2, size(Y1,1), size(Y2,1), size(X1,2)
+    fileControl(nTraits,fixedRegSize)
+    p1           = mean(X1,dims=1)./2.0
+    sum2pq1      = sum(2*(1 .- p1).*p1)
+    
+    p2           = mean(X2,dims=1)./2.0
+    sum2pq2      = sum(2*(1 .- p2).*p2)
+
+    sum2pq       = sqrt.([sum2pq1; sum2pq2]*[sum2pq1; sum2pq2]')
+    println(sum2pq)
+    
+    #priors
+const    dfβ         = dfEffect + nTraits
+const    scaleRes1    = varResidual1*(dfRes-2.0)/dfRes    
+const    scaleRes2    = varResidual2*(dfRes-2.0)/dfRes    
+
 
     if varGenotypic==0.0
-        varBeta      = fill(0.0005, nRegions)
-        scaleVar     = 0.0005
+        covBeta  = fill([0.003 0;0 0.003],nRegions)
+        Vb       = covBeta[1]
         else
-        varBeta      = fill(varGenotypic/sum2pq, nRegions)
-        scaleVar     = varBeta[1]*(dfEffectVar-2.0)/dfEffectVar
+        covBeta  = fill(varGenotypic./sum2pq,nRegions)
+        Vb       = covBeta[1].*(dfβ-nTraits-1)
     end
-    if varResidual==0.0
-        varResidual  = 0.0005
-        scaleRes     = 0.0005
-        else
-        scaleRes    = varResidual*(dfRes-2.0)/dfRes    
-    end
-    
-    #precomputation of vsB for convenience
-    νS_β            = scaleVar*dfEffectVar
-    df_β            = dfEffectVar
-    νS_e            = scaleRes*dfRes
+
+    νS_e1           = scaleRes1*dfRes
     df_e            = dfRes
-    #initial values as "0"
-    tempBetaVec     = zeros(Float64,nMarkers)
-    μ               = mean(y)
-    X              .-= ones(Float64,nRecords)*2p
-    xpx=[]
-    for i in 1:nMarkers
-    push!(xpx,dot(X[:,i],X[:,i]))
+    νS_e2           = scaleRes2*dfRes
+
+    
+    #initial Beta values as "0"
+    tempBetaMat     = zeros(Float64,nTraits,nMarkers)
+    μ               = [mean(Y1) mean(Y2)]    
+    X1             .-= ones(Float64,nRecords1)*2*p1    
+    X2             .-= ones(Float64,nRecords2)*2*p2
+    
+    MpM = []
+    #for j in 1:nMarkers
+    #    tempM = Array{Float64}(nRecords,0)
+    #    tempM = convert(Array{Float64},hcat(tempM,X1[:,j],X2[:,j]))
+    #    this = tempM'tempM
+    #    this[1,2]=this[2,1]=0.0
+    #    MpM = push!(MpM,this)
+    #end
+    for j in 1:nMarkers
+        this = Array{Float64}(nTraits,nTraits)
+        this[1,1] = X1[:,j]'X1[:,j]
+        this[2,2] = X2[:,j]'X2[:,j]
+        this[1,2] =this[2,1] =0.0
+        MpM = push!(MpM,this)
     end
-#    xpx             = diag(X'X)
-    ycorr           = y .- μ
-    #MCMC starts here
+    nowM  = 0
+    tempM = 0
+    
+    
+    Ycorr1 = Y1 .- μ[1]
+    Ycorr2 = Y2 .- μ[2]
+    
     for iter in 1:chainLength
-        #sample residual variance
-        varE = sampleVarE(νS_e,ycorr,df_e,nRecords)
-        #sample intercept
-        ycorr    .+= μ
-        rhs      = sum(ycorr)
-        invLhs   = 1.0/nRecords
-        meanMu   = rhs*invLhs
-        μ        = rand(Normal(meanMu,sqrt(invLhs*varE)))
-        ycorr    .-= μ
+        #sample residual var
+        R1 = sampleVarE(νS_e1,Ycorr1,df_e,nRecords1)
+        R2 = sampleVarE(νS_e2,Ycorr2,df_e,nRecords2)
+        Rmat = [R1 0;0 R2]
+#        Ri = kron(inv(Rmat),eye(nRecords))
+        Ri = inv(Rmat)
+
+        Ycorr1 = Ycorr1 .+ μ[1]
+        Ycorr2 = Ycorr2 .+ μ[2] 
+        
+        rhs = sum(view(Ycorr1,:,1))
+        invLhs = 1.0/nRecords1
+        mean = rhs*invLhs
+        μ[1] = rand(Normal(mean,sqrt(invLhs*Rmat[1,1])))
+        
+        rhs = sum(view(Ycorr2,:,1))
+        invLhs = 1.0/nRecords2
+        mean = rhs*invLhs
+        μ[2] = rand(Normal(mean,sqrt(invLhs*Rmat[2,2])))
+
+        Ycorr1 = Ycorr1 .- μ[1]
+        Ycorr2 = Ycorr2 .- μ[2]
+        
         for r in 1:nRegions
             theseLoci = SNPgroups[r]
             regionSize = length(theseLoci)
-            λ_r = varE/varBeta[r]
-            for l in theseLoci::UnitRange{Int64}
-                BLAS.axpy!(tempBetaVec[l], view(X,:,l), ycorr)
-                rhs = view(X,:,l)'*ycorr
-                lhs = xpx[l] + λ_r
-                meanBeta = lhs\rhs
-                tempBetaVec[l] = sampleBeta(meanBeta, lhs, varE)
-                BLAS.axpy!(-1*tempBetaVec[l], view(X,:,l), ycorr)
+            invB = inv(covBeta[r])
+            for locus in theseLoci::UnitRange{Int64}
+                sampleBeta_shaoLei!(tempBetaMat,nTraits,X1,X2,Ri,locus,MpM,Ycorr1,Ycorr2,invB)
             end
-            varBeta[r] = sampleVarBeta(νS_β,tempBetaVec[theseLoci],df_β,regionSize)
+            covBeta[r] = sampleCovBeta(dfβ,regionSize,Vb,tempBetaMat, theseLoci)
         end
-        outputControlSt(onScreen,iter,these2Keep,X,tempBetaVec,μ,varBeta,varE,fixedRegSize)
+        outputControl_shaoLei(sum2pq,onScreen,iter,these2Keep,tempBetaMat,μ,covBeta,Rmat,fixedRegSize,nRegions)
     end
+    GC.gc()
 end
 
-
-
-function mtBayesPR_shaoLei(genoTrain::DataFrame,genoTrain2::DataFrame, phenoTrain, phenoTrain2, snpInfo::String, chrs::Int64, fixedRegSize::Int64, varGenotypic::Array{Float64}, varResidual1::Float64,varResidual2::Float64,chainLength::Int64, burnIn::Int64, outputFreq::Int64, onScreen::Bool,resCor::Bool)
+function w_mtBayesPR_shaoLei(genoTrain::DataFrame,genoTrain2::DataFrame, phenoTrain, phenoTrain2, snpInfo::String, chrs::Int64, fixedRegSize::Int64, varGenotypic::Array{Float64}, varResidual1::Float64,varResidual2::Float64,chainLength::Int64, burnIn::Int64, outputFreq::Int64, onScreen::Bool,resCor::Bool)
     SNPgroups = prepRegionData(snpInfo, chrs, genoTrain, fixedRegSize)
     these2Keep = collect((burnIn+outputFreq):outputFreq:chainLength) #print these iterations
     nRegions    = length(SNPgroups)
