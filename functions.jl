@@ -222,7 +222,7 @@ function outputControl_shaoLei(sum2pq,onScreen,iter,these2Keep,tempBetaMat,μ,co
         writecsv(outCov, printThis)
         close(outCov)
         out3 = open(pwd()*"/varEOutMT$fixedRegSize", "a")
-        writecsv(out3, varE)
+        writecsv(out3, vec(varE))
         close(out3)
         coVarBeta = cov(tempBetaMat')
         genCov    = sum2pq.*coVarBeta
