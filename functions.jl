@@ -94,8 +94,8 @@ function w_mtBayesPR_shaoLei(genoTrain::DataFrame,genoTrain2::DataFrame, phenoTr
     these2Keep = collect((burnIn+outputFreq):outputFreq:chainLength) #print these iterations
     nRegions    = length(SNPgroups)
     println("number of regions: ", nRegions)
-    dfEffect    = 4.0
-    dfRes       = 4.0
+    dfEffect    = 3.0
+    dfRes       = 3.0
     X1           = convert(Array{Float64}, genoTrain[:,2:end])  #first colum is ID
     X2           = convert(Array{Float64}, genoTrain2[:,2:end])  #first colum is ID
     genoTrain  = 0 #release memory
